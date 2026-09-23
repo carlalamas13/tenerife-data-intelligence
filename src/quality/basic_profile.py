@@ -9,8 +9,8 @@ import pandas as pd
 def profile_csv(path: str | Path) -> dict:
     df = pd.read_csv(path, low_memory=False)
     return {
-        "rows": int(len(df)),
-        "columns": int(len(df.columns)),
+        "rows": len(df),
+        "columns": len(df.columns),
         "column_names": list(df.columns),
         "null_counts": df.isna().sum().to_dict(),
         "duplicate_rows": int(df.duplicated().sum()),

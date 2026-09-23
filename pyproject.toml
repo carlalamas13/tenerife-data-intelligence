@@ -23,7 +23,5 @@ ingestion = [
 [tool.ruff]
 line-length = 100
 
-enforce-ignores = true
-
 [tool.pytest.ini_options]
 pythonpath = ["."]
