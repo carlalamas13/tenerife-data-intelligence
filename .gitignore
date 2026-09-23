@@ -8,6 +8,7 @@ venv/
 .env
 .DS_Store
 .ipynb_checkpoints/
+*.egg-info/
 
 # Data artifacts
 /data/raw/*
