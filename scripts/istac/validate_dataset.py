@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 
 import pandas as pd
@@ -8,22 +10,26 @@ DATA_ROOT = Path("data/raw/istac")
 
 
 def find_dataset() -> Path:
+    """Find the most recently modified dataset file."""
+
     dataset_root = DATA_ROOT / DATASET_CODE
 
     datasets = list(dataset_root.glob("*/dataset.csv"))
 
     if not datasets:
         raise FileNotFoundError(
-            f"No se ha encontrado dataset.csv en {dataset_root}"
+            f"No dataset.csv file found in {dataset_root}"
         )
 
     return max(datasets, key=lambda path: path.stat().st_mtime)
 
 
 def load_dataset() -> pd.DataFrame:
+    """Load the most recently available dataset."""
+
     path = find_dataset()
 
-    print(f"Cargando: {path}")
+    print(f"Loading: {path}")
 
     return pd.read_csv(
         path,
@@ -33,11 +39,11 @@ def load_dataset() -> pd.DataFrame:
 
 def validate_estancia_media(df: pd.DataFrame) -> None:
     """
-    Comprueba que ESTANCIA_MEDIA coincide con:
+    Validate that ESTANCIA_MEDIA matches:
 
         PERNOCTACIONES / VIAJEROS_ENTRADOS
 
-    para observaciones mensuales con datos disponibles.
+    for monthly observations with available data.
     """
 
     required_columns = {
@@ -53,7 +59,7 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
 
     if missing_columns:
         raise ValueError(
-            f"Faltan columnas necesarias: {sorted(missing_columns)}"
+            f"Required columns are missing: {sorted(missing_columns)}"
         )
 
     subset = df[
@@ -81,7 +87,7 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
 
     if not required_measures.issubset(pivot.columns):
         print(
-            "No hay suficientes medidas para validar ESTANCIA_MEDIA."
+            "Not enough measures are available to validate ESTANCIA_MEDIA."
         )
         return
 
@@ -93,41 +99,41 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
         ]
     ).copy()
 
-    valid["ESTANCIA_MEDIA_CALCULADA"] = (
+    valid["ESTANCIA_MEDIA_CALCULATED"] = (
         valid["PERNOCTACIONES"]
         / valid["VIAJEROS_ENTRADOS"]
     )
 
-    valid["DIFERENCIA"] = (
+    valid["DIFFERENCE"] = (
         valid["ESTANCIA_MEDIA"]
-        - valid["ESTANCIA_MEDIA_CALCULADA"]
+        - valid["ESTANCIA_MEDIA_CALCULATED"]
     ).abs()
 
-    print("\n=== VALIDACIÓN ESTANCIA_MEDIA ===")
-    print(f"Observaciones válidas: {len(valid)}")
+    print("\n=== ESTANCIA_MEDIA VALIDATION ===")
+    print(f"Valid observations: {len(valid)}")
 
     if valid.empty:
-        print("No hay observaciones suficientes.")
+        print("No sufficient observations are available.")
         return
 
     print(
-        "Diferencia máxima:",
-        valid["DIFERENCIA"].max(),
+        "Maximum difference:",
+        valid["DIFFERENCE"].max(),
     )
 
     tolerance = 1e-9
 
     invalid = valid[
-        valid["DIFERENCIA"] > tolerance
+        valid["DIFFERENCE"] > tolerance
     ]
 
     print(
-        f"Observaciones fuera de tolerancia "
+        f"Observations outside tolerance "
         f"({tolerance}): {len(invalid)}"
     )
 
     if len(invalid) > 0:
-        print("\nPrimeras discrepancias:")
+        print("\nFirst discrepancies:")
         print(
             invalid[
                 [
@@ -135,8 +141,8 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
                     "VIAJEROS_ENTRADOS",
                     "PERNOCTACIONES",
                     "ESTANCIA_MEDIA",
-                    "ESTANCIA_MEDIA_CALCULADA",
-                    "DIFERENCIA",
+                    "ESTANCIA_MEDIA_CALCULATED",
+                    "DIFFERENCE",
                 ]
             ]
             .head(20)
@@ -145,47 +151,43 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
 
 
 def analyze_missingness_by_year(df: pd.DataFrame) -> None:
-    """
-    Analiza la cobertura de OBS_VALUE por año.
-    """
+    """Analyze OBS_VALUE coverage by year."""
 
     data = df.copy()
 
-    data["ANIO"] = (
+    data["YEAR"] = (
         data["TIME_PERIOD_CODE"]
         .astype(str)
         .str[:4]
     )
 
     result = (
-        data.groupby("ANIO")["OBS_VALUE"]
+        data.groupby("YEAR")["OBS_VALUE"]
         .agg(
-            filas="size",
-            valores="count",
-            nulos=lambda series: series.isna().sum(),
+            rows="size",
+            values="count",
+            missing=lambda series: series.isna().sum(),
         )
     )
 
-    result["porcentaje_con_dato"] = (
-        result["valores"]
-        / result["filas"]
+    result["coverage_percentage"] = (
+        result["values"]
+        / result["rows"]
         * 100
     ).round(2)
 
-    print("\n=== COBERTURA POR AÑO ===")
+    print("\n=== COVERAGE BY YEAR ===")
     print(result.to_string())
 
 
 def analyze_missingness_by_nationality(
     df: pd.DataFrame,
 ) -> None:
-    """
-    Analiza la cobertura de OBS_VALUE por nacionalidad y año.
-    """
+    """Analyze OBS_VALUE coverage by nationality and year."""
 
     data = df.copy()
 
-    data["ANIO"] = (
+    data["YEAR"] = (
         data["TIME_PERIOD_CODE"]
         .astype(str)
         .str[:4]
@@ -193,22 +195,166 @@ def analyze_missingness_by_nationality(
 
     result = (
         data.groupby(
-            ["NACIONALIDAD_CODE", "ANIO"]
+            ["NACIONALIDAD_CODE", "YEAR"]
         )["OBS_VALUE"]
         .count()
         .unstack(fill_value=0)
     )
 
-    print("\n=== OBSERVACIONES POR NACIONALIDAD Y AÑO ===")
+    print("\n=== OBSERVATIONS BY NATIONALITY AND YEAR ===")
+    print(result.to_string())
+
+
+def identify_new_nationalities(
+    df: pd.DataFrame,
+    reference_year: int = 2021,
+) -> None:
+    """
+    Identify nationalities with no observations before the reference
+    year and observations from the reference year onwards.
+    """
+
+    data = df.copy()
+
+    data["YEAR"] = (
+        data["TIME_PERIOD_CODE"]
+        .astype(str)
+        .str[:4]
+        .astype(int)
+    )
+
+    coverage = (
+        data.groupby(
+            ["NACIONALIDAD_CODE", "YEAR"]
+        )["OBS_VALUE"]
+        .count()
+        .unstack(fill_value=0)
+    )
+
+    previous_years = [
+        year
+        for year in coverage.columns
+        if year < reference_year
+    ]
+
+    future_years = [
+        year
+        for year in coverage.columns
+        if year >= reference_year
+    ]
+
+    if not previous_years or not future_years:
+        print(
+            "\nNot enough temporal coverage to identify "
+            "new nationalities."
+        )
+        return
+
+    new_nationalities = coverage[
+        (coverage[previous_years].sum(axis=1) == 0)
+        & (coverage[future_years].sum(axis=1) > 0)
+    ]
+
+    print(
+        "\n=== NATIONALITIES WITH NEW OBSERVATIONS ==="
+    )
+
+    if new_nationalities.empty:
+        print("No nationalities matching the pattern were found.")
+        return
+
+    print(
+        new_nationalities[
+            future_years
+        ].to_string()
+    )
+
+
+def analyze_observation_status(df: pd.DataFrame) -> None:
+    """
+    Analyze the relationship between OBS_VALUE and
+    ESTADO_OBSERVACION_CODE.
+    """
+
+    print("\n=== OBSERVATION STATUS ===")
+
+    columns = [
+        "OBS_VALUE",
+        "ESTADO_OBSERVACION_CODE",
+    ]
+
+    subset = df[columns].copy()
+
+    result = (
+        subset.groupby(
+            "ESTADO_OBSERVACION_CODE",
+            dropna=False,
+        )
+        .agg(
+            rows=("OBS_VALUE", "size"),
+            values=("OBS_VALUE", "count"),
+            missing=("OBS_VALUE", lambda series: series.isna().sum()),
+        )
+        .sort_values("rows", ascending=False)
+    )
+
+    result["missing_percentage"] = (
+        result["missing"]
+        / result["rows"]
+        * 100
+    ).round(2)
+
+    print(result.to_string())
+
+
+def analyze_confidentiality(df: pd.DataFrame) -> None:
+    """
+    Analyze the relationship between OBS_VALUE and
+    CONFIDENCIALIDAD_OBSERVACION_CODE.
+    """
+
+    print("\n=== OBSERVATION CONFIDENTIALITY ===")
+
+    columns = [
+        "OBS_VALUE",
+        "CONFIDENCIALIDAD_OBSERVACION_CODE",
+    ]
+
+    subset = df[columns].copy()
+
+    result = (
+        subset.groupby(
+            "CONFIDENCIALIDAD_OBSERVACION_CODE",
+            dropna=False,
+        )
+        .agg(
+            rows=("OBS_VALUE", "size"),
+            values=("OBS_VALUE", "count"),
+            missing=("OBS_VALUE", lambda series: series.isna().sum()),
+        )
+        .sort_values("rows", ascending=False)
+    )
+
+    result["missing_percentage"] = (
+        result["missing"]
+        / result["rows"]
+        * 100
+    ).round(2)
+
     print(result.to_string())
 
 
 def main() -> None:
+    """Run all dataset validation checks."""
+
     df = load_dataset()
 
     validate_estancia_media(df)
     analyze_missingness_by_year(df)
     analyze_missingness_by_nationality(df)
+    identify_new_nationalities(df)
+    analyze_observation_status(df)
+    analyze_confidentiality(df)
 
 
 if __name__ == "__main__":
