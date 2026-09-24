@@ -4,9 +4,22 @@ from pathlib import Path
 
 import pandas as pd
 
-
 DATASET_CODE = "C00065A_000036"
 DATA_ROOT = Path("data/raw/istac")
+
+# Tenerife municipalities published in the cube. The rest of the island
+# is aggregated in ES709_O ("Resto de Tenerife").
+TENERIFE_MUNICIPALITY_CODES = (
+    "38001",  # Adeje
+    "38006",  # Arona
+    "38017",  # Granadilla de Abona
+    "38019",  # Guía de Isora
+    "38023",  # San Cristóbal de La Laguna
+    "38028",  # Puerto de la Cruz
+    "38035",  # San Miguel de Abona
+    "38038",  # Santa Cruz de Tenerife
+    "38040",  # Santiago del Teide
+)
 
 
 def find_dataset() -> Path:
@@ -344,6 +357,270 @@ def analyze_confidentiality(df: pd.DataFrame) -> None:
     print(result.to_string())
 
 
+def classify_missing_values(df: pd.DataFrame) -> pd.Series:
+    """
+    Classify each observation as:
+
+        observed, not_available, confidential or not_published
+
+    not_published means OBS_VALUE is missing without any status or
+    confidentiality code.
+    """
+
+    missing = df["OBS_VALUE"].isna()
+    not_available = df["ESTADO_OBSERVACION_CODE"].notna()
+    confidential = df["CONFIDENCIALIDAD_OBSERVACION_CODE"].notna()
+
+    status = pd.Series("observed", index=df.index)
+    status[missing & not_available] = "not_available"
+    status[missing & confidential] = "confidential"
+    status[missing & ~not_available & ~confidential] = "not_published"
+
+    return status
+
+
+def analyze_not_published(df: pd.DataFrame) -> None:
+    """
+    Describe the observations that are missing without any status or
+    confidentiality code.
+    """
+
+    data = df.copy()
+
+    data["STATUS"] = classify_missing_values(data)
+    data["GRANULARITY"] = (
+        data["TIME_PERIOD_CODE"]
+        .str.contains(r"-M\d{2}$", regex=True)
+        .map({True: "monthly", False: "annual"})
+    )
+    data["YEAR"] = (
+        data["TIME_PERIOD_CODE"]
+        .astype(str)
+        .str[:4]
+        .astype(int)
+    )
+
+    print("\n=== OBSERVATION STATUS CLASSIFICATION ===")
+    print(data["STATUS"].value_counts().to_string())
+
+    not_published = data[data["STATUS"] == "not_published"]
+
+    result = (
+        not_published.groupby(
+            ["NACIONALIDAD_CODE", "GRANULARITY"]
+        )["YEAR"]
+        .agg(
+            rows="size",
+            years=lambda years: sorted(years.unique()),
+        )
+    )
+
+    print("\n=== NOT PUBLISHED OBSERVATIONS ===")
+    print(result.to_string())
+
+    rows_by_territory = (
+        not_published["TERRITORIO_CODE"]
+        .value_counts()
+        .unique()
+    )
+
+    print(
+        "Distinct row counts by territory:",
+        rows_by_territory.tolist(),
+    )
+
+
+def _max_absolute_difference(
+    total: pd.Series,
+    parts: pd.DataFrame,
+) -> tuple[int, float]:
+    """
+    Compare a total against the sum of its parts, ignoring rows where
+    any value is missing.
+    """
+
+    comparison = pd.concat(
+        [total.rename("TOTAL"), parts],
+        axis=1,
+    ).dropna()
+
+    difference = (
+        comparison["TOTAL"]
+        - comparison.drop(columns="TOTAL").sum(axis=1)
+    ).abs()
+
+    return len(difference), float(difference.max())
+
+
+def validate_nationality_hierarchy(df: pd.DataFrame) -> None:
+    """
+    Validate the nationality hierarchy on monthly additive measures:
+
+        _T       = ES + 5000_XES
+        5000_XES = sum of countries + 5000_XES_O
+    """
+
+    monthly = df[
+        df["TIME_PERIOD_CODE"].str.contains(r"-M\d{2}$", regex=True)
+        & df["MEDIDAS_CODE"].isin(
+            ["PERNOCTACIONES", "VIAJEROS_ENTRADOS"]
+        )
+    ]
+
+    pivot = monthly.pivot_table(
+        index=["MEDIDAS_CODE", "TERRITORIO_CODE", "TIME_PERIOD_CODE"],
+        columns="NACIONALIDAD_CODE",
+        values="OBS_VALUE",
+        aggfunc="first",
+    )
+
+    countries = [
+        code
+        for code in pivot.columns
+        if code not in {"_T", "ES", "5000_XES", "5000_XES_O"}
+    ]
+
+    print("\n=== NATIONALITY HIERARCHY ===")
+
+    checked, difference = _max_absolute_difference(
+        pivot["_T"],
+        pivot[["ES", "5000_XES"]],
+    )
+    print(
+        f"_T = ES + 5000_XES -> checked: {checked}, "
+        f"maximum difference: {difference}"
+    )
+
+    # Countries not published in a period are included in 5000_XES_O.
+    parts = pivot[countries].fillna(0)
+    parts["5000_XES_O"] = pivot["5000_XES_O"]
+
+    checked, difference = _max_absolute_difference(
+        pivot["5000_XES"],
+        parts,
+    )
+    print(
+        f"5000_XES = countries + 5000_XES_O -> checked: {checked}, "
+        f"maximum difference: {difference}"
+    )
+
+
+def validate_territorial_hierarchy(
+    df: pd.DataFrame,
+    island_code: str = "ES709",
+    municipality_codes: tuple[str, ...] = TENERIFE_MUNICIPALITY_CODES,
+) -> None:
+    """
+    Validate that an island equals the sum of its published
+    municipalities plus its residual territory (<island_code>_O).
+    """
+
+    residual_code = f"{island_code}_O"
+    territories = [island_code, residual_code, *municipality_codes]
+
+    missing_territories = set(territories) - set(df["TERRITORIO_CODE"])
+
+    if missing_territories:
+        print(
+            f"\nTerritories not found: {sorted(missing_territories)}"
+        )
+        return
+
+    island = df[
+        df["TERRITORIO_CODE"].isin(territories)
+        & df["TIME_PERIOD_CODE"].str.contains(r"-M\d{2}$", regex=True)
+        & (df["NACIONALIDAD_CODE"] == "_T")
+        & df["MEDIDAS_CODE"].isin(
+            ["PERNOCTACIONES", "VIAJEROS_ENTRADOS"]
+        )
+    ]
+
+    pivot = island.pivot_table(
+        index=["MEDIDAS_CODE", "TIME_PERIOD_CODE"],
+        columns="TERRITORIO_CODE",
+        values="OBS_VALUE",
+        aggfunc="first",
+    )
+
+    checked, difference = _max_absolute_difference(
+        pivot[island_code],
+        pivot[[*municipality_codes, residual_code]],
+    )
+
+    print(f"\n=== TERRITORIAL HIERARCHY ({island_code}) ===")
+    print(f"Published municipalities: {len(municipality_codes)}")
+    print(
+        f"{island_code} = municipalities + {residual_code} -> "
+        f"checked: {checked}, maximum difference: {difference}"
+    )
+
+
+def validate_annual_vs_monthly(df: pd.DataFrame) -> None:
+    """
+    Compare annual observations with the sum of their 12 monthly
+    observations, by measure.
+    """
+
+    measures = [
+        "PERNOCTACIONES",
+        "VIAJEROS_ENTRADOS",
+        "VIAJEROS_ALOJADOS",
+    ]
+
+    data = df[df["MEDIDAS_CODE"].isin(measures)].copy()
+    data["YEAR"] = data["TIME_PERIOD_CODE"].astype(str).str[:4]
+    is_monthly = data["TIME_PERIOD_CODE"].str.contains(
+        r"-M\d{2}$",
+        regex=True,
+    )
+
+    keys = [
+        "MEDIDAS_CODE",
+        "TERRITORIO_CODE",
+        "NACIONALIDAD_CODE",
+        "YEAR",
+    ]
+
+    monthly = (
+        data[is_monthly]
+        .groupby(keys)["OBS_VALUE"]
+        .agg(monthly_sum="sum", monthly_values="count")
+    )
+
+    annual = (
+        data[~is_monthly]
+        .set_index(keys)["OBS_VALUE"]
+        .rename("annual")
+    )
+
+    comparison = monthly.join(annual, how="inner").dropna(
+        subset=["annual"]
+    )
+    comparison = comparison[comparison["monthly_values"] == 12].copy()
+
+    comparison["mismatch"] = (
+        comparison["annual"] - comparison["monthly_sum"]
+    ).abs() > 0.5
+
+    print("\n=== ANNUAL VS SUM OF MONTHS ===")
+    print(
+        comparison.groupby("MEDIDAS_CODE")["mismatch"]
+        .agg(checked="size", mismatches="sum")
+        .to_string()
+    )
+
+    additive_mismatches = (
+        comparison[comparison["mismatch"]]
+        .reset_index()
+        .query("MEDIDAS_CODE != 'VIAJEROS_ALOJADOS'")
+        .groupby(["NACIONALIDAD_CODE", "YEAR"])
+        .size()
+    )
+
+    print("\nMismatches in additive measures:")
+    print(additive_mismatches.to_string())
+
+
 def main() -> None:
     """Run all dataset validation checks."""
 
@@ -355,6 +632,10 @@ def main() -> None:
     identify_new_nationalities(df)
     analyze_observation_status(df)
     analyze_confidentiality(df)
+    analyze_not_published(df)
+    validate_nationality_hierarchy(df)
+    validate_territorial_hierarchy(df)
+    validate_annual_vs_monthly(df)
 
 
 if __name__ == "__main__":

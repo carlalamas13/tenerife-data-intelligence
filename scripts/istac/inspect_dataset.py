@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-
 DATASET_CODE = "C00065A_000036"
 DATA_ROOT = Path("data/raw/istac")
 
