@@ -186,3 +186,28 @@ No forman parte de esta fase:
 * los modelos predictivos.
 
 Estas transformaciones se realizarán en capas posteriores.
+
+## 13. Organización de las capas RAW y staging en PostgreSQL
+
+La base de datos separará la representación de la fuente original de la capa de transformación mediante dos esquemas:
+
+* `raw`: conserva los datos procedentes de las fuentes y la información necesaria para identificar cada ingesta;
+* `staging`: contiene los datos normalizados y preparados para las capas posteriores del modelo.
+
+La capa RAW del dataset `C00065A_000036` se organiza mediante:
+
+* `raw.istac_ingestion_batch`, que identifica cada snapshot descargado;
+* `raw.istac_c00065a_000036`, que conserva las observaciones correspondientes a cada lote de ingesta.
+
+Cada lote queda identificado mediante la versión de la fuente, la fecha del snapshot, la URL y el SHA-256 del fichero descargado.
+
+El diseño es acumulativo: nuevas versiones del dataset no deben sobrescribir las anteriores. Esto permite conservar la trazabilidad y comparar snapshots cuando la fuente cambie.
+
+La carga inicial se realizará desde el fichero RAW almacenado en:
+
+```text
+data/raw/istac/C00065A_000036/
+```
+
+La capa RAW no aplica las reglas de agregación ni las transformaciones específicas del modelo analítico. Estas operaciones se realizarán posteriormente en staging y en las capas de modelado.
+
