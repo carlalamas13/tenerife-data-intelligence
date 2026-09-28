@@ -52,7 +52,7 @@ El recurso actual es la versión 2.17 y contiene datos mensuales y anuales desde
 │   ├── raw/
 │   └── processed/
 ├── .github/workflows/
-├── .env.example
+├── .env
 ├── .gitignore
 ├── pyproject.toml
 └── README.md
