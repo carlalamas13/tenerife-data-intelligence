@@ -1,0 +1,118 @@
+version: 2
+
+models:
+  - name: int_istac_tourism_monthly
+    description: >
+      Modelo intermedio mensual del dataset ISTAC C00065A_000036. Transforma
+      la estructura larga del staging en una fila por periodo, territorio,
+      nacionalidad y tipo de alojamiento, con las cuatro medidas turísticas
+      como columnas y conservando el estado de cada medida.
+
+    columns:
+      - name: ingestion_batch_id
+        description: "Identificador del lote de ingesta activo."
+        data_tests:
+          - not_null
+
+      - name: source_version
+        description: "Versión del recurso ISTAC utilizado."
+        data_tests:
+          - not_null
+
+      - name: snapshot_date
+        description: "Fecha del snapshot de la fuente."
+        data_tests:
+          - not_null
+
+      - name: period_code
+        description: "Código mensual del periodo."
+        data_tests:
+          - not_null
+
+      - name: period_start_date
+        description: "Fecha de inicio del mes."
+        data_tests:
+          - not_null
+
+      - name: territory_code
+        description: "Código oficial del territorio."
+        data_tests:
+          - not_null
+
+      - name: nationality_code
+        description: "Código oficial de la nacionalidad."
+        data_tests:
+          - not_null
+
+      - name: accommodation_type_code
+        description: "Código oficial del tipo de alojamiento."
+        data_tests:
+          - not_null
+
+      - name: travelers_entered
+        description: "Número de viajeros entrados."
+
+      - name: travelers_entered_status
+        description: "Estado de la observación de viajeros entrados."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: travelers_hosted
+        description: "Número de viajeros alojados."
+
+      - name: travelers_hosted_status
+        description: "Estado de la observación de viajeros alojados."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: overnights
+        description: "Número de pernoctaciones."
+
+      - name: overnights_status
+        description: "Estado de la observación de pernoctaciones."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: average_stay
+        description: "Estancia media publicada por ISTAC."
+
+      - name: average_stay_status
+        description: "Estado de la observación de estancia media."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: measure_count
+        description: "Número de medidas presentes en cada combinación mensual."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 4
+
+      - name: observed_measure_count
+        description: "Número de medidas que contienen un valor publicado."

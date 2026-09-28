@@ -312,3 +312,31 @@ La integración de datos del Cabildo y otras fuentes se realizará posteriorment
 Cada registro analítico debe poder relacionarse con el snapshot de la fuente del que procede mediante la trazabilidad mantenida en las capas RAW, staging e intermediate.
 
 La selección del lote activo se realiza en staging, por lo que las capas posteriores trabajarán sobre un snapshot concreto de la fuente.
+
+## 15. Organización física de los modelos en PostgreSQL
+
+Las capas de transformación se separan físicamente en distintos esquemas de PostgreSQL:
+
+```text
+raw
+staging
+intermediate
+marts
+```
+
+La correspondencia con dbt es:
+
+| Capa         | Schema PostgreSQL | Materialización                 |
+| ------------ | ----------------- | ------------------------------- |
+| RAW          | `raw`             | tablas gestionadas fuera de dbt |
+| STAGING      | `staging`         | `view`                          |
+| INTERMEDIATE | `intermediate`    | `view`                          |
+| MARTS        | `marts`           | `table`                         |
+
+La configuración de los modelos se realiza mediante `+schema` en `dbt_project.yml`.
+
+Se utiliza una implementación propia de `generate_schema_name` para que el nombre del schema personalizado se utilice directamente, evitando que dbt lo combine automáticamente con el schema definido en el perfil.
+
+Esta separación permite mantener responsabilidades diferenciadas entre las capas y facilita la trazabilidad, el mantenimiento y la futura incorporación de nuevas fuentes.
+
+Los schemas `intermediate` y `marts` se crearán cuando dbt ejecute por primera vez un modelo en dichas capas.

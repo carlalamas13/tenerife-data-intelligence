@@ -7,7 +7,6 @@ profile: tenerife_dbt
 model-paths: ["models"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
-seed-paths: ["seeds"]
 
 clean-targets:
   - target
@@ -16,4 +15,13 @@ clean-targets:
 models:
   tenerife_dbt:
     staging:
+      +schema: staging
       +materialized: view
+
+    intermediate:
+      +schema: intermediate
+      +materialized: view
+
+    marts:
+      +schema: marts
+      +materialized: table

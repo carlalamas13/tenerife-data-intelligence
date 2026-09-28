@@ -309,7 +309,28 @@ reglas:
     municipio.
 13. `5000_XES_O` no es comparable antes y después de 2021.
 
-## 9. Decisiones pendientes
+## 9. Validación de ESTANCIA_MEDIA
+
+Se ha validado la coherencia matemática de `ESTANCIA_MEDIA` frente a:
+
+`PERNOCTACIONES / VIAJEROS_ENTRADOS`
+
+Para las 111.875 filas mensuales con las tres variables disponibles:
+
+- diferencia máxima: `3.33e-8`
+- diferencia mediana: `2.42e-11`
+- percentil 95: `1.76e-10`
+- percentil 99: `4.30e-10`
+
+El `99,99 %` aproximadamente de las filas presenta diferencias inferiores o iguales a `1e-8`, y la única discrepancia superior a `1e-8` alcanza `3.33e-8`.
+
+Las diferencias observadas se consideran consecuencia del redondeo de los valores publicados por ISTAC y no de una inconsistencia de los datos.
+
+Por este motivo, el test de coherencia de `ESTANCIA_MEDIA` utiliza una tolerancia absoluta de `1e-7`.
+
+Esta tolerancia se establece a partir de la evidencia observada en el snapshot `C00065A_000036` versión `2.17` analizado el `2026-09-23`.
+
+## 10. Decisiones pendientes
 
 - Confirmar con la metadata oficial de ISTAC el cambio de desglose de
   nacionalidades en 2021.
