@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: istac
+    description: "Datos RAW procedentes del ISTAC."
+    schema: raw
+    tables:
+      - name: istac_c00065a_000036
+        description: "Snapshot RAW del cubo ISTAC C00065A_000036."

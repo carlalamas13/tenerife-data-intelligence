@@ -20,6 +20,11 @@ ingestion = [
   "tqdm>=4.66,<5",
 ]
 
+dbt = [
+  "dbt-core==1.12.5",
+  "dbt-postgres==1.11.0",
+]
+
 [tool.ruff]
 line-length = 100
 

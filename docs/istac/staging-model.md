@@ -213,3 +213,42 @@ La capa RAW no aplica las reglas de agregación ni las transformaciones específ
 
 La carga de un mismo snapshot debe ser idempotente. La tabla RAW utiliza una restricción de unicidad basada en el lote de ingesta y el grano natural de la observación para evitar duplicaciones cuando un fichero se procese más de una vez.
 
+## 14. Implementación mediante dbt
+
+La capa de staging se implementa mediante dbt sobre PostgreSQL.
+
+El flujo de dependencias es:
+
+```text
+raw.istac_c00065a_000036
+        ↓
+dbt source: istac
+        ↓
+staging.stg_istac_tourism
+```
+
+`stg_istac_tourism` se materializa como una vista en el esquema `staging`.
+
+El modelo mantiene las observaciones mensuales y anuales de la fuente y aplica únicamente transformaciones de normalización y enriquecimiento del periodo y del estado de observación.
+
+La configuración del modelo se encuentra en:
+
+```text
+dbt/tenerife_dbt/models/staging/istac/
+```
+
+Los tests de datos se utilizan para comprobar valores no nulos, categorías permitidas y el cumplimiento del grano natural del modelo.
+
+### 14.1. Incidencia con dbt Fusion
+
+Durante la configuración inicial se utilizó dbt Fusion `2.0.0-preview.173` en Windows.
+
+La conexión contra PostgreSQL produjo el error:
+
+`LoadLibraryExW failed`
+
+Se optó por utilizar dbt Core `1.12.5` junto con `dbt-postgres` `1.11.0`, instalados como dependencias del entorno virtual del proyecto.
+
+La conexión con PostgreSQL se validó correctamente mediante dbt Core y el modelo `stg_istac_tourism` se ejecuta correctamente sobre la base de datos `tenerife`.
+
+Las credenciales permanecen fuera del repositorio en el perfil local de dbt.

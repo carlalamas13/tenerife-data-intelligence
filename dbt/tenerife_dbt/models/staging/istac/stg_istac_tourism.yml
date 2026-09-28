@@ -1,0 +1,108 @@
+version: 2
+
+models:
+  - name: stg_istac_tourism
+    description: >
+      Capa de staging del dataset ISTAC C00065A_000036. Normaliza los nombres
+      de las columnas, conserva las observaciones anuales y mensuales y añade
+      atributos derivados para el tratamiento temporal y del estado de la
+      observación.
+
+    columns:
+      - name: measure_name_es
+        description: "Nombre de la medida publicado por ISTAC."
+
+      - name: measure_code
+        description: "Código oficial de la medida."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - ESTANCIA_MEDIA
+                  - PERNOCTACIONES
+                  - VIAJEROS_ALOJADOS
+                  - VIAJEROS_ENTRADOS
+
+      - name: territory_name_es
+        description: "Nombre del territorio publicado por ISTAC."
+
+      - name: territory_code
+        description: "Código oficial del territorio."
+        data_tests:
+          - not_null
+
+      - name: period_label_es
+        description: "Etiqueta descriptiva del periodo publicada por ISTAC."
+
+      - name: period_code
+        description: "Código temporal oficial de ISTAC."
+        data_tests:
+          - not_null
+
+      - name: period_granularity
+        description: "Granularidad temporal derivada del código del periodo."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - monthly
+                  - annual
+
+      - name: period_start_date
+        description: "Fecha de inicio del periodo."
+        data_tests:
+          - not_null
+
+      - name: accommodation_type_name_es
+        description: "Nombre del tipo de alojamiento publicado por ISTAC."
+
+      - name: accommodation_type_code
+        description: "Código oficial del tipo de alojamiento."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - _T
+
+      - name: nationality_name_es
+        description: "Nombre de la nacionalidad publicado por ISTAC."
+
+      - name: nationality_code
+        description: "Código oficial de la nacionalidad."
+        data_tests:
+          - not_null
+
+      - name: value
+        description: "Valor numérico de la observación."
+
+      - name: observation_note_es
+        description: "Notas asociadas a la observación."
+
+      - name: observation_status_name_es
+        description: "Descripción del estado de la observación."
+
+      - name: observation_status_code
+        description: "Código del estado de la observación."
+
+      - name: confidentiality_name_es
+        description: "Descripción de la confidencialidad de la observación."
+
+      - name: confidentiality_code
+        description: "Código de confidencialidad de la observación."
+
+      - name: observation_status
+        description: >
+          Clasificación normalizada de la observación según la disponibilidad
+          del valor, el estado y la confidencialidad.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential

@@ -19,3 +19,6 @@ venv/
 # Model artifacts
 /models/
 /mlruns/
+
+# dbt artifacts
+/dbt/logs/

@@ -1,0 +1,19 @@
+name: tenerife_dbt
+version: "1.0.0"
+config-version: 2
+
+profile: tenerife_dbt
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+
+clean-targets:
+  - target
+  - dbt_packages
+
+models:
+  tenerife_dbt:
+    staging:
+      +materialized: view
