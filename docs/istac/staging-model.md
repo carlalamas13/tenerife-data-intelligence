@@ -252,3 +252,29 @@ Se optó por utilizar dbt Core `1.12.5` junto con `dbt-postgres` `1.11.0`, insta
 La conexión con PostgreSQL se validó correctamente mediante dbt Core y el modelo `stg_istac_tourism` se ejecuta correctamente sobre la base de datos `tenerife`.
 
 Las credenciales permanecen fuera del repositorio en el perfil local de dbt.
+
+## 15. Selección del lote activo
+
+La capa RAW conserva distintos snapshots del dataset para mantener la trazabilidad y permitir comparar versiones de la fuente.
+
+`stg_istac_tourism` representa únicamente el último lote disponible del dataset `C00065A_000036`.
+
+El lote activo se determina ordenando los registros de `raw.istac_ingestion_batch` por:
+
+1. fecha del snapshot;
+2. fecha de ingesta;
+3. identificador del lote.
+
+Se selecciona el registro más reciente.
+
+De esta forma, la acumulación histórica de snapshots en RAW no provoca duplicaciones ni mezcla de versiones en la capa de staging.
+
+El modelo mantiene además:
+
+* `ingestion_batch_id`;
+* `source_version`;
+* `snapshot_date`.
+
+Estos atributos permiten identificar el snapshot concreto del que procede cada observación.
+
+Cuando se incorpore una nueva versión del dataset, el nuevo lote podrá almacenarse en RAW sin modificar el snapshot anterior, mientras que staging pasará a utilizar automáticamente el nuevo lote como activo.

@@ -4,6 +4,10 @@ sources:
   - name: istac
     description: "Datos RAW procedentes del ISTAC."
     schema: raw
+
     tables:
+      - name: istac_ingestion_batch
+        description: "Metadatos de los lotes de ingesta de ISTAC."
+
       - name: istac_c00065a_000036
-        description: "Snapshot RAW del cubo ISTAC C00065A_000036."
+        description: "Observaciones RAW del cubo ISTAC C00065A_000036."

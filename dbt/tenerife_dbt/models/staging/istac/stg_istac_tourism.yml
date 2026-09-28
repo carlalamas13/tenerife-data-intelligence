@@ -9,6 +9,20 @@ models:
       observación.
 
     columns:
+      - name: ingestion_batch_id
+        description: "Identificador interno del lote de ingesta del que procede la observación."
+        data_tests:
+          - not_null
+
+      - name: source_version
+        description: "Versión del recurso ISTAC correspondiente al snapshot."
+        data_tests:
+          - not_null
+
+      - name: snapshot_date
+        description: "Fecha del snapshot de la fuente utilizado por el modelo."
+        data_tests:
+          - not_null
       - name: measure_name_es
         description: "Nombre de la medida publicado por ISTAC."
 
