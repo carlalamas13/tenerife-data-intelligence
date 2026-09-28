@@ -251,6 +251,34 @@ Interpretación:
   - `5000_XES_O` en 2023 y 2024: los anuales vuelven a incluir `CH`, `IE`, `IT`, `NO` y `PL`, que en esos años no se publican en anual, pero sí en mensual.
   - `_T` y `ES` en 2024, en 5 territorios, con diferencias pequeñas (decenas o centenas), probablemente revisiones de los datos mensuales no trasladadas al anual.
 
+## 7.5 Automatización de las comprobaciones
+
+Parte de las reglas de calidad identificadas durante el análisis exploratorio se ha trasladado a funciones reutilizables y testeadas.
+
+Las reglas automatizadas actualmente son:
+- clasificación de las observaciones en `observed`, `not_published`, `not_avaiable` y `confidential`.
+- comparación de un total con la suma de sus componentes mediante una diferencia absoluta máxima.
+
+La implementación se encuentra en:
+
+`src/quality/istac.py`
+
+Estas funciones se prueban de forma independiente mediante:
+
+`tests/test_istac_quality.py`
+
+El script:
+
+`scripts/istac/validate_dataset.py`
+
+utiliza estas funciones para ejecutar las comprobaciones sobre el dataset real.
+
+La validación del dataset debe ejecutarse desde la raíz del repositorio mediante:
+
+`python -m scripts.istac.validate_dataset`
+
+Las validaciones automatizadas complementan las comprobaciones exploratorias documentadas en otras secciones. Los análisis realizados sobre una versión concreta del dataset se mantienen como evidencia del comportamiento observado en dicho snapshot y no deben interpretarse automáticamente como reglas generales para futuras versiones de la fuente.
+
 ## 8. Reglas de transformación
 
 A partir de las comprobaciones realizadas se establecen las siguientes

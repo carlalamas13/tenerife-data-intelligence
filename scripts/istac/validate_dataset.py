@@ -4,6 +4,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.quality.istac import (
+    classify_observation_status,
+    max_absolute_difference,
+)
+
 DATASET_CODE = "C00065A_000036"
 DATA_ROOT = Path("data/raw/istac")
 
@@ -357,28 +362,6 @@ def analyze_confidentiality(df: pd.DataFrame) -> None:
     print(result.to_string())
 
 
-def classify_missing_values(df: pd.DataFrame) -> pd.Series:
-    """
-    Classify each observation as:
-
-        observed, not_available, confidential or not_published
-
-    not_published means OBS_VALUE is missing without any status or
-    confidentiality code.
-    """
-
-    missing = df["OBS_VALUE"].isna()
-    not_available = df["ESTADO_OBSERVACION_CODE"].notna()
-    confidential = df["CONFIDENCIALIDAD_OBSERVACION_CODE"].notna()
-
-    status = pd.Series("observed", index=df.index)
-    status[missing & not_available] = "not_available"
-    status[missing & confidential] = "confidential"
-    status[missing & ~not_available & ~confidential] = "not_published"
-
-    return status
-
-
 def analyze_not_published(df: pd.DataFrame) -> None:
     """
     Describe the observations that are missing without any status or
@@ -387,7 +370,7 @@ def analyze_not_published(df: pd.DataFrame) -> None:
 
     data = df.copy()
 
-    data["STATUS"] = classify_missing_values(data)
+    data["STATUS"] = classify_observation_status(data)
     data["GRANULARITY"] = (
         data["TIME_PERIOD_CODE"]
         .str.contains(r"-M\d{2}$", regex=True)
@@ -430,28 +413,6 @@ def analyze_not_published(df: pd.DataFrame) -> None:
     )
 
 
-def _max_absolute_difference(
-    total: pd.Series,
-    parts: pd.DataFrame,
-) -> tuple[int, float]:
-    """
-    Compare a total against the sum of its parts, ignoring rows where
-    any value is missing.
-    """
-
-    comparison = pd.concat(
-        [total.rename("TOTAL"), parts],
-        axis=1,
-    ).dropna()
-
-    difference = (
-        comparison["TOTAL"]
-        - comparison.drop(columns="TOTAL").sum(axis=1)
-    ).abs()
-
-    return len(difference), float(difference.max())
-
-
 def validate_nationality_hierarchy(df: pd.DataFrame) -> None:
     """
     Validate the nationality hierarchy on monthly additive measures:
@@ -482,7 +443,7 @@ def validate_nationality_hierarchy(df: pd.DataFrame) -> None:
 
     print("\n=== NATIONALITY HIERARCHY ===")
 
-    checked, difference = _max_absolute_difference(
+    checked, difference = max_absolute_difference(
         pivot["_T"],
         pivot[["ES", "5000_XES"]],
     )
@@ -495,7 +456,7 @@ def validate_nationality_hierarchy(df: pd.DataFrame) -> None:
     parts = pivot[countries].fillna(0)
     parts["5000_XES_O"] = pivot["5000_XES_O"]
 
-    checked, difference = _max_absolute_difference(
+    checked, difference = max_absolute_difference(
         pivot["5000_XES"],
         parts,
     )
@@ -542,7 +503,7 @@ def validate_territorial_hierarchy(
         aggfunc="first",
     )
 
-    checked, difference = _max_absolute_difference(
+    checked, difference = max_absolute_difference(
         pivot[island_code],
         pivot[[*municipality_codes, residual_code]],
     )
