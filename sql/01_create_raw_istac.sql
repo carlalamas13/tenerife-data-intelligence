@@ -51,3 +51,13 @@ CREATE TABLE IF NOT EXISTS raw.istac_c00065a_000036 (
 
 CREATE INDEX IF NOT EXISTS idx_istac_c00065a_000036_batch
     ON raw.istac_c00065a_000036 (ingestion_batch_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_istac_c00065a_000036_natural_grain
+    ON raw.istac_c00065a_000036 (
+        ingestion_batch_id,
+        period_code,
+        territory_code,
+        accommodation_type_code,
+        nationality_code,
+        measure_code
+    );

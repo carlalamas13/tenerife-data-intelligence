@@ -108,4 +108,5 @@ SELECT
     observation_status_code,
     confidentiality_name_es,
     confidentiality_code
-FROM istac_c00065a_000036_load;
+FROM istac_c00065a_000036_load
+ON CONFLICT DO NOTHING;

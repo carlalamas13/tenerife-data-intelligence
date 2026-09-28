@@ -211,3 +211,5 @@ data/raw/istac/C00065A_000036/
 
 La capa RAW no aplica las reglas de agregación ni las transformaciones específicas del modelo analítico. Estas operaciones se realizarán posteriormente en staging y en las capas de modelado.
 
+La carga de un mismo snapshot debe ser idempotente. La tabla RAW utiliza una restricción de unicidad basada en el lote de ingesta y el grano natural de la observación para evitar duplicaciones cuando un fichero se procese más de una vez.
+
