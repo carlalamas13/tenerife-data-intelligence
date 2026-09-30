@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +12,7 @@ from src.quality.istac import (
 
 DATASET_CODE = "C00065A_000036"
 DATA_ROOT = Path("data/raw/istac")
+ESTANCIA_MEDIA_TOLERANCE = 1e-7
 
 # Tenerife municipalities published in the cube. The rest of the island
 # is aggregated in ES709_O ("Resto de Tenerife").
@@ -42,10 +44,13 @@ def find_dataset() -> Path:
     return max(datasets, key=lambda path: path.stat().st_mtime)
 
 
-def load_dataset() -> pd.DataFrame:
-    """Load the most recently available dataset."""
+def load_dataset(dataset_path: Path | None = None) -> pd.DataFrame:
+    """Load a specific dataset or the most recently available dataset."""
 
-    path = find_dataset()
+    path = dataset_path.resolve() if dataset_path else find_dataset()
+
+    if not path.is_file():
+        raise FileNotFoundError(f"Dataset not found: {path}")
 
     print(f"Loading: {path}")
 
@@ -139,7 +144,7 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
         valid["DIFFERENCE"].max(),
     )
 
-    tolerance = 1e-9
+    tolerance = ESTANCIA_MEDIA_TOLERANCE
 
     invalid = valid[
         valid["DIFFERENCE"] > tolerance
@@ -165,6 +170,12 @@ def validate_estancia_media(df: pd.DataFrame) -> None:
             ]
             .head(20)
             .to_string(index=False)
+        )
+
+        raise ValueError(
+            f"ESTANCIA_MEDIA validation failed: "
+            f"{len(invalid)} observations exceed the tolerance "
+            f"of {tolerance}."
         )
 
 
@@ -585,7 +596,19 @@ def validate_annual_vs_monthly(df: pd.DataFrame) -> None:
 def main() -> None:
     """Run all dataset validation checks."""
 
-    df = load_dataset()
+    parser = argparse.ArgumentParser(
+        description="Validate an ISTAC dataset."
+    )
+
+    parser.add_argument(
+        "--dataset",
+        type=Path,
+        help="Path to the dataset CSV.",
+    )
+
+    args = parser.parse_args()
+
+    df = load_dataset(args.dataset)
 
     validate_estancia_media(df)
     analyze_missingness_by_year(df)
