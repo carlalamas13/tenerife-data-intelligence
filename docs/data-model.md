@@ -140,18 +140,31 @@ Esta clasificación se basa exclusivamente en los códigos y nombres territorial
 
 ### 5.3. `dim_nationality`
 
-Representa la nacionalidad del viajero.
+La dimensión `dim_nationality` representa la jerarquía estadística de nacionalidades publicada por ISTAC para el dataset `C00065A_000036`.
 
-Atributos previstos:
+La estructura publicada se modela de la siguiente forma:
 
-* `nationality_key`
-* `nationality_code`
-* `nationality_name`
-* `parent_nationality_code`
+* `_T`: total de nacionalidades.
+* `ES`: España.
+* `5000_XES`: Mundo, excluida España.
+* códigos de países: desgloses individuales dentro de `5000_XES`.
+* `5000_XES_O`: otros países o territorios del mundo, excluida España.
 
-Se conservarán las jerarquías publicadas por ISTAC.
+Los códigos `ES` y `5000_XES` se consideran agregados dentro de la jerarquía estadística, ya que son componentes directos de `_T`. Los códigos de países se consideran niveles de detalle de `5000_XES`, mientras que `5000_XES_O` se trata explícitamente como un territorio residual.
 
-La ruptura de serie de `5000_XES_O` alrededor de 2021 deberá mantenerse como una característica de los datos y no se corregirá mediante una recodificación artificial.
+La dimensión incorpora:
+
+* `nationality_code`: código publicado por ISTAC.
+* `nationality_name_es`: descripción en español.
+* `nationality_level`: nivel estadístico (`total`, `aggregate`, `country` o `residual`).
+* `parent_nationality_code`: agregado estadístico padre.
+* `is_total`: indicador del total.
+* `is_residual`: indicador de categoría residual.
+
+La clasificación se basa exclusivamente en los 16 códigos presentes en el snapshot ISTAC analizado y no pretende establecer una jerarquía geopolítica adicional.
+
+Además, la disponibilidad temporal de algunas nacionalidades puede variar. En el snapshot analizado, `CH`, `IE`, `IT`, `NO` y `PL` presentan datos a partir de 2021; su ausencia en periodos anteriores no se interpreta como una ausencia de la nacionalidad en la población, sino como una característica de publicación del conjunto de datos.
+
 
 ### 5.4. `dim_accommodation`
 
