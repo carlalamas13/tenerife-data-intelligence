@@ -289,6 +289,15 @@ Esta regla se valida mediante el test `fct_tourism_observation_status_consistenc
 
 La separación entre valor y estado evita interpretar un dato no publicado o no disponible como un cero y permite distinguir correctamente entre ausencia de valor y valor numérico igual a cero.
 
+## 7.6 Quality gate de la ingesta
+
+El validador de ISTAC puede ejecutarse sobre un fichero CSV concreto mediante el argumento `--dataset`.
+
+La validación de `ESTANCIA_MEDIA` utiliza una tolerancia absoluta de `1e-7`, establecida a partir de las diferencias observadas en el snapshot del dataset `C00065A_000036`.
+
+Si una observación supera esta tolerancia, la validación termina con error y el proceso que la invoque debe detener la carga del snapshot.
+
+El resto de análisis del validador proporcionan información de calidad y contexto sobre cobertura, estados de observación, jerarquías y consistencia temporal.
 
 ## 8. Reglas de transformación
 
