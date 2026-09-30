@@ -101,6 +101,47 @@ def write_manifest(
 
     return manifest_path
 
+def ingest_dataset(
+    dataset_id: str,
+    version: str,
+    fmt: str,
+    raw_dir: str,
+    base_url: str,
+) -> tuple[Path, Path]:
+    """Download an ISTAC dataset and return dataset and manifest paths."""
+    url = build_url(
+        dataset_id,
+        version,
+        fmt,
+        base_url,
+    )
+
+    run_date = datetime.now(UTC).strftime("%Y-%m-%d")
+
+    output = (
+        Path(raw_dir)
+        / "istac"
+        / dataset_id
+        / run_date
+        / f"dataset.{fmt}"
+    )
+
+    downloaded_path, checksum = download_dataset(
+        url,
+        output,
+    )
+
+    manifest_path = write_manifest(
+        downloaded_path,
+        dataset_id=dataset_id,
+        version=version,
+        fmt=fmt,
+        url=url,
+        checksum=checksum,
+    )
+
+    return downloaded_path, manifest_path
+
 
 def main() -> None:
     load_dotenv()
@@ -137,36 +178,16 @@ def main() -> None:
         DEFAULT_BASE_URL,
     )
 
-    url = build_url(
-        args.dataset_id,
-        args.version,
-        args.fmt,
-        base_url,
-    )
-
-    run_date = datetime.now(UTC).strftime("%Y-%m-%d")
-
-    output = (
-        Path(args.raw_dir)
-        / "istac"
-        / args.dataset_id
-        / run_date
-        / f"dataset.{args.fmt}"
-    )
-
-    downloaded_path, checksum = download_dataset(
-        url,
-        output,
-    )
-
-    write_manifest(
-        downloaded_path,
+    dataset_path, manifest_path = ingest_dataset(
         dataset_id=args.dataset_id,
         version=args.version,
         fmt=args.fmt,
-        url=url,
-        checksum=checksum,
+        raw_dir=args.raw_dir,
+        base_url=base_url,
     )
+
+    LOGGER.info("Dataset path: %s", dataset_path)
+    LOGGER.info("Manifest path: %s", manifest_path)
 
 
 if __name__ == "__main__":
