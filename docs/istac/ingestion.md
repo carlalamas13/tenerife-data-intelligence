@@ -30,3 +30,16 @@ El pipeline mantiene además la posibilidad de indicar explícitamente una versi
 
 Cuando no se proporciona una versión, el pipeline consulta ISTAC y utiliza automáticamente la última versión disponible.
 
+## Control de nuevas versiones
+
+Cuando el pipeline se ejecuta sin indicar explícitamente una versión, compara la última versión disponible publicada por ISTAC con la última versión cargada en `raw.istac_ingestion_batch`.
+
+Si ambas versiones coinciden, el pipeline finaliza sin descargar ni procesar nuevamente el dataset.
+
+Este comportamiento evita ejecuciones innecesarias cuando el pipeline se programa periódicamente.
+
+La detección se basa en el número de versión publicado por ISTAC. El SHA-256 continúa utilizándose como mecanismo de integridad y trazabilidad del contenido una vez descargado.
+
+La ejecución con `--version <version>` permite procesar explícitamente una versión concreta, manteniendo la reproducibilidad de snapshots históricos.
+
+

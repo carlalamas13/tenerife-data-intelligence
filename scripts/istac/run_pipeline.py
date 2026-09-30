@@ -38,6 +38,49 @@ def run_command(
     )
 
 
+def get_latest_loaded_version(
+    dataset_id: str,
+) -> str | None:
+    """Return the latest dataset version loaded into RAW."""
+    command = [
+        "docker",
+        "compose",
+        "exec",
+        "-T",
+        "postgres",
+        "psql",
+        "-U",
+        "tenerife",
+        "-d",
+        "tenerife",
+        "-At",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        (
+            "SELECT source_version "
+            "FROM raw.istac_ingestion_batch "
+            f"WHERE dataset_code = '{dataset_id}' "
+            "ORDER BY snapshot_date DESC, "
+            "ingested_at DESC, "
+            "ingestion_batch_id DESC "
+            "LIMIT 1;"
+        ),
+    ]
+
+    result = subprocess.run(
+        command,
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    version = result.stdout.strip()
+
+    return version or None
+
+
 def main() -> None:
     """Run the complete ISTAC ingestion pipeline."""
 
@@ -58,10 +101,10 @@ def main() -> None:
 
     parser.add_argument(
         "--version",
-        default=os.getenv("ISTAC_VERSION"),
+        default=None,
         help=(
-            "ISTAC dataset version. If omitted, the latest "
-            "available version is detected automatically."
+            "ISTAC dataset version. If omitted, the latest available "
+            "version is detected automatically."
         ),
     )
 
@@ -91,12 +134,40 @@ def main() -> None:
         DEFAULT_BASE_URL,
     )
 
-    version = args.version
+    explicit_version = args.version is not None
 
-    if version is None:
+    if explicit_version:
+        version = args.version
+        LOGGER.info(
+            "Using explicitly requested ISTAC version: %s",
+            version,
+        )
+    else:
         version = get_latest_version(
             dataset_id=args.dataset_id,
             base_url=base_url,
+        )
+
+        latest_loaded_version = get_latest_loaded_version(
+            dataset_id=args.dataset_id,
+        )
+
+        LOGGER.info(
+            "Latest loaded ISTAC version: %s",
+            latest_loaded_version or "none",
+        )
+
+        if latest_loaded_version == version:
+            LOGGER.info(
+                "No new ISTAC version available. "
+                "Latest version %s is already loaded.",
+                version,
+            )
+            return
+
+        LOGGER.info(
+            "New ISTAC version detected: %s",
+            version,
         )
 
     LOGGER.info(
@@ -106,7 +177,9 @@ def main() -> None:
     )
 
     # Step 1: download the dataset and generate its manifest.
-    LOGGER.info("Step 1/4: downloading ISTAC dataset.")
+    LOGGER.info(
+        "Step 1/4: downloading ISTAC dataset."
+    )
 
     dataset_path, manifest_path = ingest_dataset(
         dataset_id=args.dataset_id,

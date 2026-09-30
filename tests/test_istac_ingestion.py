@@ -67,3 +67,22 @@ def test_get_latest_version(monkeypatch):
         )
         == "10.0"
     )
+
+def test_get_latest_loaded_version(monkeypatch):
+    class FakeResult:
+        stdout = "2.18\n"
+
+    def fake_run(*args, **kwargs):
+        return FakeResult()
+
+    monkeypatch.setattr(
+        "scripts.istac.run_pipeline.subprocess.run",
+        fake_run,
+    )
+
+    from scripts.istac.run_pipeline import get_latest_loaded_version
+
+    assert (
+        get_latest_loaded_version("C00065A_000036")
+        == "2.18"
+    )
