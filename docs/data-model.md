@@ -118,25 +118,25 @@ Para el snapshot ISTAC actual, la dimensión cubre desde enero de 2009 hasta jul
 
 ### 5.2. `dim_territory`
 
-Representa los territorios geográficos publicados por las fuentes.
+### Clasificación territorial
 
-Se utilizará como dimensión general porque las fuentes pueden contener diferentes niveles territoriales.
+La dimensión `dim_territory` clasifica los 47 territorios publicados por ISTAC en cuatro niveles:
 
-Atributos previstos:
+* `region`: Canarias.
+* `island`: las 7 islas con información publicada.
+* `municipality`: los 35 municipios presentes en el dataset.
+* `residual`: territorios agregados identificados por los códigos con sufijo `_O`.
 
-* `territory_key`
-* `territory_code`
-* `territory_name`
-* `territory_level`
-* `parent_territory_code`
+Los territorios residuales `ES705_O`, `ES706_O`, `ES707_O` y `ES709_O` representan respectivamente el resto de Gran Canaria, La Gomera, La Palma y Tenerife. Estos registros no se consideran municipios y se asocian a su correspondiente `island_code`.
 
-Los códigos oficiales de ISTAC se conservarán.
+La dimensión mantiene además:
 
-Los territorios agregados y residuales no se tratarán como municipios.
+* `island_code`: código de la isla a la que pertenece el territorio.
+* `island_name_es`: nombre de la isla.
+* `is_residual`: indicador booleano de territorio residual.
 
-En particular, `ES709_O` se conservará como territorio residual de Tenerife.
+Esta clasificación se basa exclusivamente en los códigos y nombres territoriales presentes en el snapshot ISTAC `C00065A_000036`, versión `2.17`, y no pretende inferir territorios que no estén publicados por la fuente.
 
-La creación de una dimensión específica de municipios podrá realizarse posteriormente a partir de una fuente de referencia territorial independiente.
 
 ### 5.3. `dim_nationality`
 
