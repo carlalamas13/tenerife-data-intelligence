@@ -279,6 +279,17 @@ La validación del dataset debe ejecutarse desde la raíz del repositorio median
 
 Las validaciones automatizadas complementan las comprobaciones exploratorias documentadas en otras secciones. Los análisis realizados sobre una versión concreta del dataset se mantienen como evidencia del comportamiento observado en dicho snapshot y no deben interpretarse automáticamente como reglas generales para futuras versiones de la fuente.
 
+### Consistencia entre estado de observación y valor
+
+En la tabla de hechos `fct_tourism`, los valores no publicados, no disponibles o confidenciales se mantienen como `NULL` y se acompañan de su correspondiente estado de observación.
+
+Una medida con estado `observed` debe disponer de un valor no nulo. Por el contrario, una medida cuyo estado no sea `observed` no debe presentar un valor numérico.
+
+Esta regla se valida mediante el test `fct_tourism_observation_status_consistency`.
+
+La separación entre valor y estado evita interpretar un dato no publicado o no disponible como un cero y permite distinguir correctamente entre ausencia de valor y valor numérico igual a cero.
+
+
 ## 8. Reglas de transformación
 
 A partir de las comprobaciones realizadas se establecen las siguientes

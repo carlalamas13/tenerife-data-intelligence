@@ -1,0 +1,120 @@
+version: 2
+
+models:
+  - name: fct_tourism
+    description: "Tabla de hechos mensual para el análisis de turismo de Tenerife."
+
+    columns:
+      - name: date_key
+        description: "Clave de la dimensión calendario en formato YYYYMM."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+      - name: territory_code
+        description: "Código territorial publicado por ISTAC."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_territory')
+                field: territory_code
+
+      - name: nationality_code
+        description: "Código de nacionalidad publicado por ISTAC."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_nationality')
+                field: nationality_code
+
+      - name: accommodation_type_code
+        description: "Código de tipo de alojamiento publicado por ISTAC."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_accommodation')
+                field: accommodation_type_code
+
+      - name: ingestion_batch_id
+        description: "Identificador del lote de ingesta del que procede la observación."
+        data_tests:
+          - not_null
+
+      - name: source_version
+        description: "Versión del dataset ISTAC utilizada."
+
+      - name: snapshot_date
+        description: "Fecha del snapshot de la fuente."
+
+      - name: travelers_entered
+        description: "Viajeros entrados."
+
+      - name: travelers_entered_status
+        description: "Estado de publicación de viajeros entrados."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: travelers_hosted
+        description: "Viajeros alojados."
+
+      - name: travelers_hosted_status
+        description: "Estado de publicación de viajeros alojados."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: overnights
+        description: "Pernoctaciones."
+
+      - name: overnights_status
+        description: "Estado de publicación de pernoctaciones."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: average_stay
+        description: "Estancia media calculada como pernoctaciones entre viajeros entrados, redondeada a 10 decimales."
+
+      - name: average_stay_status
+        description: "Estado de publicación de estancia media."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - observed
+                  - not_published
+                  - not_available
+                  - confidential
+
+      - name: measure_count
+        description: "Número de medidas presentes en el registro intermedio."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [4]
+
+      - name: observed_measure_count
+        description: "Número de medidas con valor observado."

@@ -178,21 +178,41 @@ No se introduce ninguna jerarquía adicional, ya que ISTAC no publica niveles de
 
 ## 6. `fct_tourism`
 
-La tabla de hechos contendrá las principales métricas turísticas.
+`fct_tourism` constituye la tabla de hechos principal del modelo analítico de turismo.
 
-### Claves
+Su grano es:
 
-* `date_key`
-* `territory_key`
-* `nationality_key`
-* `accommodation_key`
+`mes + territorio + nacionalidad + tipo de alojamiento`
 
-### Medidas
+Cada fila representa una combinación única de estas cuatro dimensiones para un mes determinado.
 
-* `travelers_entered`
-* `travelers_hosted`
-* `overnights`
-* `average_stay`
+La fact table se construye a partir de `int_istac_tourism_monthly` y se relaciona con:
+
+* `dim_date`
+* `dim_territory`
+* `dim_nationality`
+* `dim_accommodation`
+
+El modelo conserva todas las filas del modelo intermedio mediante `LEFT JOIN`, evitando perder observaciones por ausencia de correspondencia dimensional.
+
+Las medidas incluidas son:
+
+* `travelers_entered`: viajeros entrados.
+* `travelers_hosted`: viajeros alojados.
+* `overnights`: pernoctaciones.
+* `average_stay`: estancia media.
+
+`average_stay` se calcula como:
+
+`overnights / travelers_entered`
+
+cuando ambas medidas están disponibles y `travelers_entered` es distinto de cero. El resultado se redondea a 10 decimales.
+
+No se convierten valores no publicados, no disponibles o confidenciales en cero. Los valores permanecen como `NULL` y se conserva su correspondiente campo de estado de observación.
+
+Los datos anuales se mantienen en RAW y STAGING, pero no se incorporan a `fct_tourism`, cuyo grano es exclusivamente mensual. Esto evita mezclar distintas granularidades en una misma tabla de hechos.
+
+La fact table se valida mediante tests de unicidad del grano, conservación del número de filas, coherencia de `average_stay` y relaciones con las cuatro dimensiones.
 
 ## 7. Reglas de las medidas
 
@@ -350,3 +370,22 @@ Se utiliza una implementación propia de `generate_schema_name` para que el nomb
 Esta separación permite mantener responsabilidades diferenciadas entre las capas y facilita la trazabilidad, el mantenimiento y la futura incorporación de nuevas fuentes.
 
 Los schemas `intermediate` y `marts` se crearán cuando dbt ejecute por primera vez un modelo en dichas capas.
+
+## 16. Validación integral del modelo analítico
+
+La primera versión completa del modelo dimensional se valida mediante `dbt build`, ejecutando de forma integrada los modelos y sus tests respetando el grafo de dependencias.
+
+En el snapshot ISTAC `C00065A_000036`, versión `2.17`, la ejecución completa produce:
+
+* 7 modelos dbt.
+* 2 modelos de tipo `view`: `stg_istac_tourism` e `int_istac_tourism_monthly`.
+* 5 modelos de tipo `table`: las cuatro dimensiones y `fct_tourism`.
+* 89 ejecuciones de modelos y tests completadas correctamente.
+* 0 errores y 0 warnings.
+
+La tabla de hechos `fct_tourism` contiene 158.672 filas, correspondientes al producto:
+
+`211 meses × 47 territorios × 16 nacionalidades × 1 tipo de alojamiento`.
+
+La unicidad del grano y las relaciones con las cuatro dimensiones se validan mediante tests de dbt.
+
