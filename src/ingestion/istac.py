@@ -19,13 +19,84 @@ DEFAULT_BASE_URL = (
 )
 
 DEFAULT_DATASET_ID = "C00065A_000036"
-DEFAULT_VERSION = "2.17"
 DEFAULT_FORMAT = "csv"
 
 
 def build_url(dataset_id: str, version: str, fmt: str, base_url: str) -> str:
     """Build the URL of an ISTAC statistical resource."""
     return f"{base_url.rstrip('/')}/{dataset_id}/{version}.{fmt}"
+
+
+def get_latest_version(
+    dataset_id: str,
+    base_url: str,
+    timeout: int = 30,
+) -> str:
+    """Return the latest available ISTAC dataset version."""
+    url = f"{base_url.rstrip('/')}/{dataset_id}"
+
+    LOGGER.info("Checking latest ISTAC version: %s", url)
+
+    response = requests.get(
+        url,
+        params={"limit": 1000},
+        timeout=timeout,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "tenerife-data-intelligence/0.1",
+        },
+    )
+    response.raise_for_status()
+
+    payload = response.json()
+    datasets = payload.get("dataset")
+
+    if not isinstance(datasets, list) or not datasets:
+        raise ValueError(
+            f"No dataset versions found for {dataset_id}."
+        )
+
+    versions: list[tuple[tuple[int, ...], str]] = []
+
+    for dataset in datasets:
+        if not isinstance(dataset, dict):
+            continue
+
+        self_link = dataset.get("selfLink")
+
+        if not isinstance(self_link, dict):
+            continue
+
+        href = self_link.get("href")
+
+        if not isinstance(href, str):
+            continue
+
+        version = href.rstrip("/").rsplit("/", maxsplit=1)[-1]
+        parts = version.split(".")
+
+        if not parts or not all(part.isdigit() for part in parts):
+            continue
+
+        version_key = tuple(int(part) for part in parts)
+        versions.append((version_key, version))
+
+    if not versions:
+        raise ValueError(
+            f"No valid versions found for dataset {dataset_id}."
+        )
+
+    latest_version = max(
+        versions,
+        key=lambda item: item[0],
+    )[1]
+
+    LOGGER.info(
+        "Latest ISTAC version detected: %s",
+        latest_version,
+    )
+
+    return latest_version
 
 
 def download_dataset(
@@ -157,7 +228,8 @@ def main() -> None:
 
     parser.add_argument(
         "--version",
-        default=os.getenv("ISTAC_VERSION", DEFAULT_VERSION),
+        default=None,
+        help="ISTAC dataset version. If omitted, the latest version is detected automatically.",
     )
 
     parser.add_argument(
@@ -178,9 +250,18 @@ def main() -> None:
         DEFAULT_BASE_URL,
     )
 
+    version = (
+        args.version
+        or os.getenv("ISTAC_VERSION")
+        or get_latest_version(
+            dataset_id=args.dataset_id,
+            base_url=base_url,
+        )
+    )
+
     dataset_path, manifest_path = ingest_dataset(
         dataset_id=args.dataset_id,
-        version=args.version,
+        version=version,
         fmt=args.fmt,
         raw_dir=args.raw_dir,
         base_url=base_url,

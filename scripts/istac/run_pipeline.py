@@ -2,11 +2,20 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-from scripts.istac.validate_dataset import find_dataset
+from dotenv import load_dotenv
+
+from src.ingestion.istac import (
+    DEFAULT_BASE_URL,
+    DEFAULT_DATASET_ID,
+    DEFAULT_FORMAT,
+    get_latest_version,
+    ingest_dataset,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -14,7 +23,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DBT_PROJECT_DIR = PROJECT_ROOT / "dbt" / "tenerife_dbt"
 
 
-def run_command(command: list[str], description: str, cwd: Path) -> None:
+def run_command(
+    command: list[str],
+    description: str,
+    cwd: Path,
+) -> None:
     """Run a command and stop the pipeline if it fails."""
     LOGGER.info("%s", description)
 
@@ -28,39 +41,91 @@ def run_command(command: list[str], description: str, cwd: Path) -> None:
 def main() -> None:
     """Run the complete ISTAC ingestion pipeline."""
 
+    load_dotenv()
+
     parser = argparse.ArgumentParser(
         description="Run the complete ISTAC ingestion pipeline."
     )
 
     parser.add_argument(
+        "--dataset-id",
+        default=os.getenv(
+            "ISTAC_DATASET_ID",
+            DEFAULT_DATASET_ID,
+        ),
+        help="ISTAC dataset identifier.",
+    )
+
+    parser.add_argument(
         "--version",
-        required=True,
-        help="ISTAC dataset version to ingest.",
+        default=os.getenv("ISTAC_VERSION"),
+        help=(
+            "ISTAC dataset version. If omitted, the latest "
+            "available version is detected automatically."
+        ),
+    )
+
+    parser.add_argument(
+        "--format",
+        dest="fmt",
+        default=os.getenv(
+            "ISTAC_FORMAT",
+            DEFAULT_FORMAT,
+        ),
+        help="Dataset format.",
+    )
+
+    parser.add_argument(
+        "--raw-dir",
+        default=os.getenv(
+            "RAW_DIR",
+            "data/raw",
+        ),
+        help="Raw data directory.",
     )
 
     args = parser.parse_args()
 
-    # Step 1: download the dataset and generate its manifest.
-    run_command(
-        [
-            sys.executable,
-            "-m",
-            "src.ingestion.istac",
-            "--version",
-            args.version,
-        ],
-        "Step 1/4: downloading ISTAC dataset.",
-        PROJECT_ROOT,
+    base_url = os.getenv(
+        "ISTAC_BASE_URL",
+        DEFAULT_BASE_URL,
     )
 
-    # Step 2: identify the dataset just downloaded.
-    dataset_path = find_dataset()
-    manifest_path = dataset_path.parent / "manifest.json"
+    version = args.version
 
-    LOGGER.info("Dataset selected: %s", dataset_path)
-    LOGGER.info("Manifest selected: %s", manifest_path)
+    if version is None:
+        version = get_latest_version(
+            dataset_id=args.dataset_id,
+            base_url=base_url,
+        )
 
-    # Step 3: run the quality gate against the exact snapshot.
+    LOGGER.info(
+        "Using ISTAC dataset %s version %s.",
+        args.dataset_id,
+        version,
+    )
+
+    # Step 1: download the dataset and generate its manifest.
+    LOGGER.info("Step 1/4: downloading ISTAC dataset.")
+
+    dataset_path, manifest_path = ingest_dataset(
+        dataset_id=args.dataset_id,
+        version=version,
+        fmt=args.fmt,
+        raw_dir=args.raw_dir,
+        base_url=base_url,
+    )
+
+    LOGGER.info(
+        "Dataset path: %s",
+        dataset_path,
+    )
+    LOGGER.info(
+        "Manifest path: %s",
+        manifest_path,
+    )
+
+    # Step 2: run the quality gate against the exact snapshot.
     run_command(
         [
             sys.executable,
@@ -73,7 +138,7 @@ def main() -> None:
         PROJECT_ROOT,
     )
 
-    # Step 4: load the validated snapshot into RAW.
+    # Step 3: load the validated snapshot into RAW.
     run_command(
         [
             sys.executable,
@@ -85,7 +150,7 @@ def main() -> None:
         PROJECT_ROOT,
     )
 
-    # Step 5: rebuild all dbt models and tests.
+    # Step 4: rebuild all dbt models and tests.
     run_command(
         [
             "dbt",
@@ -95,12 +160,14 @@ def main() -> None:
         DBT_PROJECT_DIR,
     )
 
-    LOGGER.info("ISTAC pipeline completed successfully.")
+    LOGGER.info(
+        "ISTAC pipeline completed successfully."
+    )
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level="INFO",
+        level=os.getenv("LOG_LEVEL", "INFO"),
         format="%(asctime)s | %(levelname)s | %(message)s",
     )
     main()

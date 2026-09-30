@@ -51,7 +51,7 @@ La actualización de ISTAC 2.17 a 2.18 ha sido validada como una extensión mens
 * [x] Mantener snapshots históricos independientes.
 * [ ] Mejorar la interfaz entre la descarga y el pipeline para devolver directamente el snapshot generado.
 * [ ] Añadir pruebas automatizadas específicas para el pipeline de ingesta.
-* [ ] Evaluar la detección automática de nuevas versiones disponibles del dataset.
+* [x] Evaluar la detección automática de nuevas versiones disponibles del dataset.
 
 ### 2. Automatizar la ejecución
 
