@@ -7,11 +7,45 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - run: pip install -e ".[dev]"
-      - run: pytest
-      - run: ruff check .
+          python-version: "3.11"
+
+      - name: Install project dependencies
+        run: pip install -e ".[dev,dbt]"
+
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Run tests
+        run: pytest
+
+      - name: Create dbt profile
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.dbt"
+
+          cat > "$HOME/.dbt/profiles.yml" <<'EOF'
+          tenerife_dbt:
+            target: dev
+            outputs:
+              dev:
+                type: postgres
+                host: localhost
+                port: 5432
+                user: tenerife
+                password: ci-placeholder
+                dbname: tenerife
+                schema: staging
+                threads: 4
+          EOF
+
+      - name: Validate dbt project
+        working-directory: dbt/tenerife_dbt
+        run: dbt parse
