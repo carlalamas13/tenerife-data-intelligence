@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: dim_nationality
+    description: "Dimensión de nacionalidad del modelo analítico de turismo."
+
+    columns:
+      - name: nationality_code
+        description: "Código de nacionalidad publicado por el ISTAC."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: nationality_name_es
+        description: "Nombre de la nacionalidad o agregado en español."
+        data_tests:
+          - not_null
+
+      - name: nationality_level
+        description: "Nivel dentro de la jerarquía estadística de nacionalidades."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - total
+                  - aggregate
+                  - country
+                  - residual
+
+      - name: parent_nationality_code
+        description: "Código del agregado estadístico padre."
+
+      - name: is_total
+        description: "Indica si representa el total de nacionalidades."
+        data_tests:
+          - not_null
+
+      - name: is_residual
+        description: "Indica si representa otros países o territorios no desglosados."
+        data_tests:
+          - not_null
