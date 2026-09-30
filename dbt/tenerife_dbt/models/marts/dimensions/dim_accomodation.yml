@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: dim_accommodation
+    description: "Dimensión de tipo de alojamiento turístico publicada por ISTAC."
+
+    columns:
+      - name: accommodation_type_code
+        description: "Código del tipo de alojamiento publicado por ISTAC."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: accommodation_type_name_es
+        description: "Nombre del tipo de alojamiento en español."
+        data_tests:
+          - not_null

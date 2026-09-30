@@ -168,17 +168,13 @@ Además, la disponibilidad temporal de algunas nacionalidades puede variar. En e
 
 ### 5.4. `dim_accommodation`
 
-Representa el tipo de alojamiento turístico.
+La dimensión `dim_accommodation` representa los tipos de alojamiento turístico publicados por ISTAC.
 
-Atributos previstos:
+En el snapshot `C00065A_000036`, versión `2.17`, solo aparece el código `_T`, correspondiente a `Total`. Por este motivo, la dimensión contiene actualmente una única fila.
 
-* `accommodation_key`
-* `accommodation_type_code`
-* `accommodation_type_name`
+Se mantiene la dimensión aunque el snapshot actual no publique un desglose por tipos de alojamiento. Esta decisión permite conservar un modelo dimensional estable y preparado para futuras versiones de la fuente en las que puedan aparecer nuevas categorías de alojamiento.
 
-Actualmente el dataset `C00065A_000036` solo publica `_T`, por lo que la dimensión tendrá inicialmente una única categoría procedente de esta fuente.
-
-La estructura se mantiene para permitir incorporar posteriormente otras categorías o fuentes.
+No se introduce ninguna jerarquía adicional, ya que ISTAC no publica niveles de alojamiento adicionales en el snapshot analizado.
 
 ## 6. `fct_tourism`
 
