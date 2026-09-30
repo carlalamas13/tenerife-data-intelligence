@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: dim_date
+    description: "Dimensión calendario mensual para el modelo analítico de turismo."
+
+    columns:
+      - name: date_key
+        description: "Clave numérica del mes en formato YYYYMM."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: month_start_date
+        description: "Primer día del mes."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: year
+        description: "Año del mes."
+        data_tests:
+          - not_null
+
+      - name: quarter
+        description: "Trimestre del año."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+
+      - name: month_number
+        description: "Número de mes."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+
+      - name: month_name_es
+        description: "Nombre del mes en español."
+        data_tests:
+          - not_null
+
+      - name: year_month
+        description: "Etiqueta del mes en formato YYYY-MM."
+        data_tests:
+          - not_null
+          - unique

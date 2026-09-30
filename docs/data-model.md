@@ -98,22 +98,23 @@ Las cuatro medidas de ISTAC se almacenarán como columnas del hecho.
 
 ### 5.1. `dim_date`
 
-Representa el periodo temporal utilizado por el modelo.
+La dimensión `dim_date` se genera a partir del rango temporal mensual disponible en `int_istac_tourism_monthly`.
 
-El hecho turístico será mensual y utilizará como referencia la fecha de inicio del mes.
+El modelo crea una fila por cada mes comprendido entre el primer y el último `period_start_date` disponible. La clave `date_key` utiliza el formato `YYYYMM`.
 
-Atributos previstos:
+La dimensión incluye:
 
-* `date_key`
-* `date`
-* `year`
-* `month`
-* `month_number`
-* `month_name`
-* `quarter`
-* `year_month`
+- `date_key`: clave numérica del mes.
+- `month_start_date`: primer día del mes.
+- `year`: año.
+- `quarter`: trimestre.
+- `month_number`: número de mes.
+- `month_name_es`: nombre del mes en español.
+- `year_month`: etiqueta `YYYY-MM`.
 
-La dimensión se diseñará de forma que pueda reutilizarse posteriormente con otras fuentes y modelos.
+La generación dinámica evita mantener manualmente un calendario y permite que la dimensión se adapte a la cobertura temporal disponible en los datos.
+
+Para el snapshot ISTAC actual, la dimensión cubre desde enero de 2009 hasta julio de 2026.
 
 ### 5.2. `dim_territory`
 
