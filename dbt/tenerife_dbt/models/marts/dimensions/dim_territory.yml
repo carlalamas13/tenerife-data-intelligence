@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: dim_territory
+    description: "Dimensión territorial del modelo analítico de turismo."
+
+    columns:
+      - name: territory_code
+        description: "Código territorial procedente del ISTAC."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: territory_name_es
+        description: "Nombre del territorio en español."
+        data_tests:
+          - not_null
+
+      - name: territory_level
+        description: "Nivel territorial: región, isla, municipio o territorio residual."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - region
+                  - island
+                  - municipality
+                  - residual
+
+      - name: island_code
+        description: "Código ISTAC de la isla a la que pertenece el territorio."
+
+      - name: island_name_es
+        description: "Nombre de la isla a la que pertenece el territorio."
+
+      - name: is_residual
+        description: "Indica si el territorio representa un agregado residual de una isla."
+        data_tests:
+          - not_null
