@@ -1,4 +1,4 @@
-\set csv_file '/data/raw/istac/C00065A_000036/2026-09-23/dataset.csv'
+\set ON_ERROR_STOP on
 
 INSERT INTO raw.istac_ingestion_batch (
     dataset_code,
@@ -10,13 +10,13 @@ INSERT INTO raw.istac_ingestion_batch (
     source_file_name
 )
 VALUES (
-    'C00065A_000036',
-    '2.17',
-    DATE '2026-09-23',
-    'https://datos.canarias.es/api/estadisticas/statistical-resources/v1.0/datasets/ISTAC/C00065A_000036/2.17.csv',
-    'eed3902efce360741893bc41ea339d70c4941a4af9cc2494e22dce804932ed47',
-    73326587,
-    'dataset.csv'
+    :'dataset_code',
+    :'source_version',
+    :'snapshot_date',
+    :'source_url',
+    :'source_sha256',
+    :source_file_size_bytes,
+    :'source_file_name'
 )
 ON CONFLICT (
     dataset_code,
